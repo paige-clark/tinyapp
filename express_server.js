@@ -6,10 +6,15 @@ const express = require("express");
 const app = express();
 const PORT = 3000; // default port 3000
 app.set("view engine", "ejs"); // set the view engine to EJS
+app.use(express.urlencoded({ extended: true })); // encodes URL data from the POST method
 
 ////////////////////////////////////////////
 // DATABASE
 ////////////////////////////////////////////
+
+function generateRandomString() {
+
+};
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -39,6 +44,12 @@ app.get("/urls", (req, res) => {
 // GET route to present submission form to USER
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
+});
+
+// POST for submission to... Somewhere...
+app.post("/urls", (req, res) => {
+  console.log(req.body); // Log the POST request body to the console
+  res.send("Ok"); // Respond with 'Ok' (we will replace this)
 });
 
 // EJS page that displays the long url for a URL id
