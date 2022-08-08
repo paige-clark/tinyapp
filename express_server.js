@@ -13,7 +13,8 @@ app.use(express.urlencoded({ extended: true })); // encodes URL data from the PO
 ////////////////////////////////////////////
 
 function generateRandomString() {
-
+  // this will be returned to the user as part of their new link
+  return Math.floor((1 + Math.random()) * 0x1000000).toString(16).substring(1);
 };
 
 const urlDatabase = {
