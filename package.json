@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/paige-clark/tinyapp/issues"
   },
-  "homepage": "https://github.com/paige-clark/tinyapp#readme"
+  "homepage": "https://github.com/paige-clark/tinyapp#readme",
+  "dependencies": {
+    "express": "^4.18.1"
+  }
 }
