@@ -36,6 +36,11 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
+// GET route to present submission form to USER
+app.get("/urls/new", (req, res) => {
+  res.render("urls_new");
+});
+
 // EJS page that displays the long url for a URL id
 app.get("/urls/:id", (req, res) => {
   const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id] };
