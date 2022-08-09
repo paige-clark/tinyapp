@@ -59,6 +59,12 @@ app.get("/urls/:id", (req, res) => {
 app.post("/urls/:id/delete", (request, response) => {
   delete urlDatabase[request.params.id];
   response.redirect("/urls")
+});
+
+// edit list item
+app.post("/urls/:id/edit", (request, response) => {
+  urlDatabase[request.params.id] = request.body.longURL;
+  response.redirect("/urls")
 }) 
 
 // redirects you to the website associated with the shortened link
