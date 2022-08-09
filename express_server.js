@@ -63,6 +63,7 @@ app.post("/urls/:id/delete", (request, response) => {
 
 // edit list item
 app.post("/urls/:id/edit", (request, response) => {
+  console.log(request.body);
   urlDatabase[request.params.id] = request.body.longURL;
   response.redirect("/urls")
 }) 
