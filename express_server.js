@@ -9,12 +9,12 @@ app.set("view engine", "ejs"); // set the view engine to EJS
 app.use(express.urlencoded({ extended: true })); // encodes URL data from the POST method
 
 ////////////////////////////////////////////
-// DATABASE
+// GLOBAL SCOPE
 ////////////////////////////////////////////
 
 function generateRandomString() {
-  // this will be returned to the user as part of their new link
-  return Math.floor((1 + Math.random()) * 0x1000000).toString(16).substring(1);
+  let garbledString = Math.floor((1 + Math.random()) * 0x1000000).toString(16).substring(1);
+  return garbledString;
 };
 
 const urlDatabase = {
@@ -25,11 +25,6 @@ const urlDatabase = {
 ////////////////////////////////////////////
 // ROUTES
 ////////////////////////////////////////////
-
-// page says 'hello'
-app.get("/", (req, res) => {
-  res.send("Hello!");
-});
 
 // shows what's in our urls object
 app.get("/urls.json", (req, res) => {
@@ -47,21 +42,32 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
-// POST for submission to... Somewhere...
+// POST that submits a new entry to the database and redirects to the page for the ID
 app.post("/urls", (req, res) => {
-  console.log(req.body); // Log the POST request body to the console
-  res.send("Ok"); // Respond with 'Ok' (we will replace this)
+  const newID = generateRandomString();
+  const newSubmission = urlDatabase[newID] = req.body.longURL;
+  res.redirect(`/urls/${newID}`)
 });
 
-// EJS page that displays the long url for a URL id
+// EJS page that displays the original URL and a shortened URL
 app.get("/urls/:id", (req, res) => {
   const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id] };
   res.render("urls_show", templateVars);
 });
 
-// Says Hellow World with HTML formatting
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
+// redirects you to the website associated with the shortened link
+app.get("/u/:id", (req, res) => {
+  const longURL = urlDatabase[req.params.id];
+  if (longURL) {
+    res.redirect(longURL);
+  } else {
+    res.redirect("/ERROR")
+  }
+});
+
+// 404 page for if something goes wrong
+app.get("/ERROR", (req, res) => {
+  res.render("error_page")
 });
 
 
