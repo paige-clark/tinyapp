@@ -46,7 +46,7 @@ app.get("/urls/new", (req, res) => {
 app.post("/urls", (req, res) => {
   const newID = generateRandomString();
   const newSubmission = urlDatabase[newID] = req.body.longURL;
-  res.redirect(`/urls/${newID}`)
+  res.redirect(`/urls/${newID}`) //ask if this is correct tomorrow
 });
 
 // EJS page that displays the original URL and a shortened URL
@@ -54,6 +54,12 @@ app.get("/urls/:id", (req, res) => {
   const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id] };
   res.render("urls_show", templateVars);
 });
+
+// delete list item
+app.post("/urls/:id/delete", (request, response) => {
+  delete urlDatabase[request.params.id];
+  response.redirect("/urls")
+}) 
 
 // redirects you to the website associated with the shortened link
 app.get("/u/:id", (req, res) => {
