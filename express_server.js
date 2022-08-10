@@ -37,6 +37,15 @@ const users = {
   },
 };
 
+const emailFinder = function(emailToCheck) {
+  for (const person in users) {
+    if (users[person].email === emailToCheck) {
+      return users[person];
+    }
+  }
+  return null;
+};
+
 ////////////////////////////////////////////
 // ROUTES
 ////////////////////////////////////////////
@@ -65,7 +74,15 @@ app.get("/register", (req, res) => {
 
 // Creates an entry for the user on registration and assigns a cookie to the user
 app.post("/register", (req, res) => {
-  const randomID = generateRandomString();
+  // check if either email or password field are empty
+  if (!req.body.email || !req.body.password) {
+    return res.status(400).send('One of the fields was left blank!');
+  }
+  // check if an account with the email exists already
+  if (emailFinder(req.body.email)) {
+    return res.status(400).send('Email already in use!');
+  }
+  const randomID = generateRandomString(); //generating unique code
   users[randomID] = { id: randomID, email: req.body.email, password: req.body.password };
   res.cookie('user_id', randomID);
   console.log(`New user created: ${JSON.stringify(users[randomID])}`);
