@@ -10,27 +10,35 @@
         <a class="nav-item nav-link" href="/urls">My URLs</a>
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
       </div>
-      
+
       <!--FORM IS HERE LOOKEE-->
-      <div style="position: absolute; right: 0px; width: 300px; margin-top: 7px;">
-        <% if (!username) {%>
-          <form class="form-inline" action="/login" method="POST">
-            <!--MUST POST TO /LOGIN-->
+      <% if (!user) {%>
+        <!--NEED TO FIX THE REGISTER BUTTON-->
+        <div style="position: absolute; right: 0px; width: 100px; margin-top: 0px;">
+          <a href="/register">
+            <button class="btn btn-outline-dark">Register</button>
+          </a>
+        </div>
+        <!-- <form class="form-inline" action="/register" method="POST">
             <div class="form-group mb-2">
               <input class="form-control" type="text" name="username" placeholder="Username"
                 style="width: 200px; margin: 0.5em" />
-              <button type="submit" class="btn btn-outline-dark">Login</button>
+              <button type="submit" class="btn btn-outline-dark">Register</button>
             </div>
-          </form>
-          <% } else { %>
+          </form> -->
+        <% } else { %>
+          <div style="position: absolute; right: 5px; margin-top: 5px;">
             <form class="form-inline" action="/logout" method="POST">
               <div class="form-group mb-2">
-                <p style="width: 200px; margin: 0.5em; text-align: right;">Logged in as: <b><%= username %></b></p>
-                  <button type="submit" class="btn btn-outline-dark">Logout</button>
+                <p style="width: 200px; margin: 0.5em; text-align: right;">Logged in as: <b>
+                    <%= user.email %>
+                  </b></p>
+                <button type="submit" class="btn btn-outline-dark">Logout</button>
               </div>
             </form>
-            <% } %>
-      </div>
+          </div>
+          <% } %>
+    </div>
 
     </div>
   </nav>

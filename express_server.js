@@ -24,6 +24,19 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+const users = {
+  userRandomID: {
+    id: "userRandomID",
+    email: "user@example.com",
+    password: "purple-monkey-dinosaur",
+  },
+  user2RandomID: {
+    id: "user2RandomID",
+    email: "user2@example.com",
+    password: "dishwasher-funk",
+  },
+};
+
 ////////////////////////////////////////////
 // ROUTES
 ////////////////////////////////////////////
@@ -40,19 +53,29 @@ app.get("/", (req, res) => {
 
 // EJS page that shows list of short and long URLs
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase, username: req.cookies["username"] };
+  const templateVars = { urls: urlDatabase, user: users[req.cookies["user_id"]] }; // had username: req.cookies["username"]
   res.render("urls_index", templateVars);
 });
 
 // EJS page that shows register field
-app.get("/register", (request, response) => {
-  const templateVars = { urls: urlDatabase, username: request.cookies["username"] };
-  response.render("registration", templateVars);
+app.get("/register", (req, res) => {
+  const templateVars = { urls: urlDatabase, user: users[req.cookies["user_id"]] }; // had username: req.cookies["username"]
+  res.render("registration", templateVars);
+});
+
+// Creates an entry for the user on registration and assigns a cookie to the user
+app.post("/register", (req, res) => {
+  const randomID = generateRandomString();
+  users[randomID] = { id: randomID, email: req.body.email, password: req.body.password };
+  res.cookie('user_id', randomID);
+  console.log(`New user created: ${JSON.stringify(users[randomID])}`);
+  // console.log(users);
+  return res.redirect("/urls");
 });
 
 // GET route to present submission form to USER
 app.get("/urls/new", (req, res) => {
-  const templateVars = { username: req.cookies["username"] };
+  const templateVars = { user: users[req.cookies["user_id"]] }; // had username: req.cookies["username"]
   res.render("urls_new", templateVars);
 });
 
@@ -65,7 +88,7 @@ app.post("/urls", (req, res) => {
 
 // EJS page that displays the original URL and a shortened URL
 app.get("/urls/:id", (req, res) => {
-  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id], username: req.cookies["username"] };
+  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id], user: users[req.cookies["user_id"]] }; // had username: req.cookies["username"]
   res.render("urls_show", templateVars);
 });
 
@@ -108,7 +131,7 @@ app.post("/logout", (request, response) => {
 
 // 404 page for if something goes wrong
 app.get("/ERROR", (req, res) => {
-  const templateVars = { username: req.cookies["username"] }
+  const templateVars = { user: users[req.cookies["user_id"]] }
   res.render("error_page", templateVars)
 });
 
