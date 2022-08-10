@@ -8,7 +8,7 @@ const PORT = 3000; // default port 3000
 app.set("view engine", "ejs"); // set the view engine to EJS
 app.use(express.urlencoded({ extended: true })); // encodes URL data from the POST method
 const cookieParser = require('cookie-parser');
-app.use(cookieParser());
+app.use(cookieParser()); // allows the app to use cookieParser
 
 ////////////////////////////////////////////
 // GLOBAL SCOPE
@@ -28,17 +28,26 @@ const urlDatabase = {
 // ROUTES
 ////////////////////////////////////////////
 
-// allows the app to use cookieParser
-
 // shows what's in our urls object
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
+});
+
+// redirects / to urls_index
+app.get("/", (req, res) => {
+  return res.redirect('/urls');
 });
 
 // EJS page that shows list of short and long URLs
 app.get("/urls", (req, res) => {
   const templateVars = { urls: urlDatabase, username: req.cookies["username"] };
   res.render("urls_index", templateVars);
+});
+
+// EJS page that shows register field
+app.get("/register", (request, response) => {
+  const templateVars = { urls: urlDatabase, username: request.cookies["username"] };
+  response.render("registration", templateVars);
 });
 
 // GET route to present submission form to USER
@@ -77,9 +86,9 @@ app.post("/urls/:id/edit", (request, response) => {
 app.get("/u/:id", (req, res) => {
   const longURL = urlDatabase[req.params.id];
   if (longURL) {
-    res.redirect(longURL);
+    return res.redirect(longURL);
   } else {
-    res.redirect("/ERROR")
+    return res.redirect("/ERROR")
   }
 });
 
@@ -93,7 +102,6 @@ app.post("/login", (request, response) => {
 // clears login cookie
 app.post("/logout", (request, response) => {
   console.log(`Clearing the cookie: ${request.cookies["username"]}`);
-  // urlDatabase = {};
   response.clearCookie('username')
   response.redirect("/urls")
 });
