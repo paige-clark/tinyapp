@@ -74,14 +74,17 @@ app.get("/register", (req, res) => {
 
 // Creates an entry for the user on registration and assigns a cookie to the user
 app.post("/register", (req, res) => {
+
   // check if either email or password field are empty
   if (!req.body.email || !req.body.password) {
     return res.status(400).send('One of the fields was left blank!');
   }
+
   // check if an account with the email exists already
   if (emailFinder(req.body.email)) {
     return res.status(400).send('Email already in use!');
   }
+
   const randomID = generateRandomString(); //generating unique code
   users[randomID] = { id: randomID, email: req.body.email, password: req.body.password };
   res.cookie('user_id', randomID);
@@ -90,7 +93,13 @@ app.post("/register", (req, res) => {
   return res.redirect("/urls");
 });
 
-// GET route to present submission form to USER
+// GET route to show LOGIN page to user
+app.get("/login", (req, res) => {
+  const templateVars = { user: users[req.cookies["user_id"]] }; // had username: req.cookies["username"]
+  res.render("login", templateVars);
+});
+
+// GET route to present SUBMISSION FORM to user
 app.get("/urls/new", (req, res) => {
   const templateVars = { user: users[req.cookies["user_id"]] }; // had username: req.cookies["username"]
   res.render("urls_new", templateVars);
@@ -132,12 +141,13 @@ app.get("/u/:id", (req, res) => {
   }
 });
 
-// creates login cookie
-app.post("/login", (request, response) => {
-  console.log(`New cookie created: ${request.body.username}`);
-  response.cookie('username', request.body.username);
-  response.redirect("/urls")
-});
+// OLD LOGIN POST
+// // creates login cookie
+// app.post("/login", (request, response) => {
+//   console.log(`New cookie created: ${request.body.username}`);
+//   response.cookie('username', request.body.username);
+//   response.redirect("/urls")
+// });
 
 // clears login cookie
 app.post("/logout", (request, response) => {
