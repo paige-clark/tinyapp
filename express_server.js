@@ -62,29 +62,26 @@ app.get("/", (req, res) => {
 
 // EJS page that shows list of short and long URLs
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase, user: users[req.cookies["user_id"]] }; // had username: req.cookies["username"]
+  const templateVars = { urls: urlDatabase, user: users[req.cookies["user_id"]] };
   res.render("urls_index", templateVars);
 });
 
 // EJS page that shows register field
 app.get("/register", (req, res) => {
-  const templateVars = { urls: urlDatabase, user: users[req.cookies["user_id"]] }; // had username: req.cookies["username"]
+  const templateVars = { urls: urlDatabase, user: users[req.cookies["user_id"]] };
   res.render("registration", templateVars);
 });
 
 // Creates an entry for the user on registration and assigns a cookie to the user
 app.post("/register", (req, res) => {
-
   // check if either email or password field are empty
   if (!req.body.email || !req.body.password) {
     return res.status(400).send('One of the fields was left blank!');
   }
-
   // check if an account with the email exists already
   if (emailFinder(req.body.email)) {
     return res.status(400).send('Email already in use!');
   }
-
   const randomID = generateRandomString(); //generating unique code
   users[randomID] = { id: randomID, email: req.body.email, password: req.body.password };
   res.cookie('user_id', randomID);
@@ -93,15 +90,35 @@ app.post("/register", (req, res) => {
   return res.redirect("/urls");
 });
 
-// GET route to show LOGIN page to user
+// GET route to show LOGIN page
 app.get("/login", (req, res) => {
-  const templateVars = { user: users[req.cookies["user_id"]] }; // had username: req.cookies["username"]
+  const templateVars = { user: users[req.cookies["user_id"]] };
   res.render("login", templateVars);
+});
+
+// POST to LOGIN
+app.post("/login", (req, res) => {
+  // console.log(users);
+  // check if either email or password field are empty
+  if (!req.body.email || !req.body.password) {
+    return res.status(400).send('One of the fields was left blank!');
+  }
+  // check if email doesn't match records
+  if (!emailFinder(req.body.email)) {
+    return res.status(403).send('Email not found! Check email or make a new account.');
+  }
+  // check if inputted password matches stored password
+  const userID = emailFinder(req.body.email).id;
+  if (users[userID].password !== req.body.password) {
+    return res.status(403).send('Incorrect password!');
+  }
+  res.cookie('user_id', userID);
+  return res.redirect("/urls");
 });
 
 // GET route to present SUBMISSION FORM to user
 app.get("/urls/new", (req, res) => {
-  const templateVars = { user: users[req.cookies["user_id"]] }; // had username: req.cookies["username"]
+  const templateVars = { user: users[req.cookies["user_id"]] };
   res.render("urls_new", templateVars);
 });
 
@@ -114,7 +131,7 @@ app.post("/urls", (req, res) => {
 
 // EJS page that displays the original URL and a shortened URL
 app.get("/urls/:id", (req, res) => {
-  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id], user: users[req.cookies["user_id"]] }; // had username: req.cookies["username"]
+  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id], user: users[req.cookies["user_id"]] };
   res.render("urls_show", templateVars);
 });
 
@@ -141,19 +158,11 @@ app.get("/u/:id", (req, res) => {
   }
 });
 
-// OLD LOGIN POST
-// // creates login cookie
-// app.post("/login", (request, response) => {
-//   console.log(`New cookie created: ${request.body.username}`);
-//   response.cookie('username', request.body.username);
-//   response.redirect("/urls")
-// });
-
-// clears login cookie
-app.post("/logout", (request, response) => {
-  console.log(`Clearing the cookie: ${request.cookies["username"]}`);
-  response.clearCookie('username')
-  response.redirect("/urls")
+// LOGOUT user
+app.post("/logout", (req, res) => {
+  console.log(`Clearing the cookie: ${req.cookies["user_id"]}`);
+  res.clearCookie('user_id')
+  return res.redirect("/urls")
 });
 
 // 404 page for if something goes wrong

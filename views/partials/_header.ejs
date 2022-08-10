@@ -13,7 +13,6 @@
 
       <!--FORM IS HERE LOOKEE-->
       <% if (!user) {%>
-        <!--NEED TO FIX THE REGISTER BUTTON-->
         <div style="position: absolute; right: 7px; margin-top: 0px;">
           <a style="margin: 3px;" href="/register">
             <button class="btn btn-outline-dark">Register</button>
@@ -22,13 +21,6 @@
             <button class="btn btn-outline-dark">Login</button>
           </a>
         </div>
-        <!-- <form class="form-inline" action="/register" method="POST">
-            <div class="form-group mb-2">
-              <input class="form-control" type="text" name="username" placeholder="Username"
-                style="width: 200px; margin: 0.5em" />
-              <button type="submit" class="btn btn-outline-dark">Register</button>
-            </div>
-          </form> -->
         <% } else { %>
           <div style="position: absolute; right: 5px; margin-top: 5px;">
             <form class="form-inline" action="/logout" method="POST">
