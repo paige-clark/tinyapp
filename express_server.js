@@ -69,7 +69,11 @@ app.get("/urls", (req, res) => {
 // EJS page that shows register field
 app.get("/register", (req, res) => {
   const templateVars = { urls: urlDatabase, user: users[req.cookies["user_id"]] };
-  res.render("registration", templateVars);
+  // if a user is logged in, redirect to home
+  if (req.cookies["user_id"]) {
+    return res.redirect("/urls");
+  }
+  return res.render("registration", templateVars);
 });
 
 // Creates an entry for the user on registration and assigns a cookie to the user
@@ -93,7 +97,12 @@ app.post("/register", (req, res) => {
 // GET route to show LOGIN page
 app.get("/login", (req, res) => {
   const templateVars = { user: users[req.cookies["user_id"]] };
-  res.render("login", templateVars);
+  // if a user is logged in, redirect to home
+  if (req.cookies["user_id"]) {
+    return res.redirect("/urls");
+  }
+  // otherwise, go to login page
+  return res.render("login", templateVars);
 });
 
 // POST to LOGIN
@@ -119,20 +128,29 @@ app.post("/login", (req, res) => {
 // GET route to present SUBMISSION FORM to user
 app.get("/urls/new", (req, res) => {
   const templateVars = { user: users[req.cookies["user_id"]] };
-  res.render("urls_new", templateVars);
+  if (!req.cookies["user_id"]) {
+    return res.redirect("/login");
+  }
+  return res.render("urls_new", templateVars);
 });
 
 // POST that submits a new entry to the database and redirects to the page for the ID
 app.post("/urls", (req, res) => {
+  if (!req.cookies["user_id"]) {
+    return res.send('You must be logged in to create TinyURLs!');
+  }
   const newID = generateRandomString();
   const newSubmission = urlDatabase[newID] = req.body.longURL;
-  res.redirect(`/urls/${newID}`) //ask if this is correct tomorrow
+  return res.redirect(`/urls/${newID}`) //ask if this is correct tomorrow
 });
 
 // EJS page that displays the original URL and a shortened URL
 app.get("/urls/:id", (req, res) => {
   const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id], user: users[req.cookies["user_id"]] };
-  res.render("urls_show", templateVars);
+  if (!urlDatabase[req.params.id]) {
+    return res.send('There is no TinyURL with that ID!');
+  }
+  return res.render("urls_show", templateVars);
 });
 
 // delete list item
@@ -142,10 +160,13 @@ app.post("/urls/:id/delete", (request, response) => {
 });
 
 // edit list item
-app.post("/urls/:id/edit", (request, response) => {
-  console.log(request.body);
-  urlDatabase[request.params.id] = request.body.longURL;
-  response.redirect("/urls")
+app.post("/urls/:id/edit", (req, res) => {
+  if (!req.cookies["user_id"]) {
+    return res.send('You must be logged in to edit TinyURLs!');
+  }
+  console.log(req.body);
+  urlDatabase[req.params.id] = req.body.longURL;
+  return res.redirect("/urls")
 }) 
 
 // redirects you to the website associated with the shortened link
