@@ -7,6 +7,9 @@ const app = express();
 const PORT = 3000; // default port 3000
 app.set("view engine", "ejs"); // set the view engine to EJS
 app.use(express.urlencoded({ extended: true })); // encodes URL data from the POST method
+const bcrypt = require("bcryptjs"); // require bcrypt
+
+// const hashedPassword = bcrypt.hashSync(password, 10); // creates a hashed password
 const cookieParser = require('cookie-parser');
 app.use(cookieParser()); // allows the app to use cookieParser
 
@@ -18,11 +21,6 @@ function generateRandomString() {
   let garbledString = Math.floor((1 + Math.random()) * 0x1000000).toString(16).substring(1);
   return garbledString;
 };
-
-// const urlDatabase = {
-//   "b2xVn2": "http://www.lighthouselabs.ca",
-//   "9sm5xK": "http://www.google.com"
-// };
 
 const urlDatabase = {
   b6UTxQ: {
@@ -104,6 +102,7 @@ app.get("/urls", (req, res) => {
 // EJS page that shows register field
 app.get("/register", (req, res) => {
   const templateVars = { urls: urlDatabase, user: users[req.cookies["user_id"]] };
+
   // if a user is logged in, redirect to home
   if (req.cookies["user_id"]) {
     return res.redirect("/urls");
@@ -121,11 +120,12 @@ app.post("/register", (req, res) => {
   if (emailFinder(req.body.email)) {
     return res.status(400).send('Email already in use!');
   }
+  const hashedPassword = bcrypt.hashSync(req.body.password, 10); // creates a hashed password
   const randomID = generateRandomString(); //generating unique code
-  users[randomID] = { id: randomID, email: req.body.email, password: req.body.password };
+  users[randomID] = { id: randomID, email: req.body.email, password: hashedPassword };
   res.cookie('user_id', randomID);
   console.log(`New user created: ${JSON.stringify(users[randomID])}`);
-  // console.log(users);
+  console.log(users);
   return res.redirect("/urls");
 });
 
@@ -142,7 +142,7 @@ app.get("/login", (req, res) => {
 
 // POST to LOGIN
 app.post("/login", (req, res) => {
-  // console.log(users);
+  console.log(users);
   // check if either email or password field are empty
   if (!req.body.email || !req.body.password) {
     return res.status(400).send('One of the fields was left blank!');
@@ -151,9 +151,9 @@ app.post("/login", (req, res) => {
   if (!emailFinder(req.body.email)) {
     return res.status(403).send('Email not found! Check email or make a new account.');
   }
-  // check if inputted password matches stored password
+  // check if inputted password matches stored password (using bcrypt)
   const userID = emailFinder(req.body.email).id;
-  if (users[userID].password !== req.body.password) {
+  if (!bcrypt.compareSync(req.body.password, users[userID].password)) {
     return res.status(403).send('Incorrect password!');
   }
   res.cookie('user_id', userID);
