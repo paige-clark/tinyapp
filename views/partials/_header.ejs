@@ -5,36 +5,43 @@
       aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-      <div class="navbar-nav">
-        <a class="nav-item nav-link" href="/urls">My URLs</a>
-        <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
-      </div>
-
-      <!--FORM IS HERE LOOKEE-->
-      <% if (!user) {%>
-        <div style="position: absolute; right: 7px; margin-top: 0px;">
-          <a style="margin: 3px;" href="/register">
-            <button class="btn btn-outline-dark">Register</button>
-          </a>
-          <a href="/login">
-            <button class="btn btn-outline-dark">Login</button>
-          </a>
+    <% if (!user) {%>
+      <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+        <div class="navbar-nav">
+          <a class="nav-item nav-link" href="/login">My URLs</a>
+          <a class="nav-item nav-link" href="/login">Create New URL</a>
         </div>
         <% } else { %>
-          <div style="position: absolute; right: 5px; margin-top: 5px;">
-            <form class="form-inline" action="/logout" method="POST">
-              <div class="form-group mb-2">
-                <p style="width: 200px; margin: 0.5em; text-align: right;">Logged in as: <b>
-                    <%= user.email %>
-                  </b></p>
-                <button type="submit" class="btn btn-outline-dark">Logout</button>
-              </div>
-            </form>
+          <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+            <div class="navbar-nav">
+              <a class="nav-item nav-link" href="/urls">My URLs</a>
+              <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
+            </div>
+            <% } %>
+              <!--FORM IS HERE LOOKEE-->
+              <% if (!user) {%>
+                <div style="position: absolute; right: 7px; margin-top: 0px;">
+                  <a style="margin: 3px;" href="/register">
+                    <button class="btn btn-outline-dark">Register</button>
+                  </a>
+                  <a href="/login">
+                    <button class="btn btn-outline-dark">Login</button>
+                  </a>
+                </div>
+                <% } else { %>
+                  <div style="position: absolute; right: 5px; margin-top: 5px;">
+                    <form class="form-inline" action="/logout" method="POST">
+                      <div class="form-group mb-2">
+                        <p style="width: 200px; margin: 0.5em; text-align: right;">Logged in as: <b>
+                            <%= user.email %>
+                          </b></p>
+                        <button type="submit" class="btn btn-outline-dark">Logout</button>
+                      </div>
+                    </form>
+                  </div>
+                  <% } %>
           </div>
-          <% } %>
-    </div>
 
-    </div>
+      </div>
   </nav>
 </header>
