@@ -7,31 +7,19 @@ const app = express();
 const PORT = 3000; // default port 3000
 app.set("view engine", "ejs"); // set the view engine to EJS
 app.use(express.urlencoded({ extended: true })); // encodes URL data from the POST method
+const { emailFinder, generateRandomString, urlsForUser, isValidUrl } = require('./helpers.js');
 const bcrypt = require("bcryptjs"); // require bcrypt
-// TODO: implement bcrypt salt
-// const salt = bcrypt.genSaltSync(10);
 const cookieSession = require('cookie-session');
 
 app.use(cookieSession({
   name: 'session',
   keys: ['c8911ee4-2ab7-4bc3-9814-ecc6147ba261'],
-
-  // Cookie Options
-  maxAge: 24 * 60 * 60 * 1000 // 24 hours
-}))
-
-// DELETE BEFORE SUBMITTING switching to cookieSession
-// const cookieParser = require('cookie-parser');
-// app.use(cookieParser()); // allows the app to use cookieParser
+  maxAge: 24 * 60 * 60 * 1000 // Cookie options: 24 hours
+}));
 
 ////////////////////////////////////////////
-// GLOBAL SCOPE
+// GLOBAL SCOPE / DATABASES
 ////////////////////////////////////////////
-
-function generateRandomString() {
-  let garbledString = Math.floor((1 + Math.random()) * 0x1000000).toString(16).substring(1);
-  return garbledString;
-};
 
 const urlDatabase = {
   b6UTxQ: {
@@ -61,40 +49,11 @@ const users = {
   },
 };
 
-const emailFinder = function(emailToCheck) {
-  for (const person in users) {
-    if (users[person].email === emailToCheck) {
-      return users[person];
-    }
-  }
-  return null;
-};
-
-const urlsForUser = function (userID) {
-  let newObj = {};
-  for (const entry in urlDatabase) {
-    if (urlDatabase[entry].userID === userID) {
-      newObj[entry] = urlDatabase[entry];
-    }
-  }
-  return newObj;
-};
-
-// using this code from Free Code Camp to validate URL for redirect for now
-const isValidUrl = function(urlString) {
-  try { 
-    return Boolean(new URL(urlString)); 
-  }
-  catch(e){ 
-    return false; 
-  }
-}
-
 ////////////////////////////////////////////
 // ROUTES
 ////////////////////////////////////////////
 
-// shows what's in our urls object
+// GET shows what's in the URLs database object
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
@@ -106,7 +65,7 @@ app.get("/", (req, res) => {
 
 // EJS page that shows list of short and long URLs
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlsForUser(req.session['user_id']), user: users[req.session['user_id']] };
+  const templateVars = { urls: urlsForUser(req.session['user_id'], urlDatabase), user: users[req.session['user_id']] };
   return res.render("urls_index", templateVars);
 });
 
@@ -128,7 +87,7 @@ app.post("/register", (req, res) => {
     return res.status(400).send('One of the fields was left blank!');
   }
   // check if an account with the email exists already
-  if (emailFinder(req.body.email)) {
+  if (emailFinder(req.body.email, users)) {
     return res.status(400).send('Email already in use!');
   }
   const hashedPassword = bcrypt.hashSync(req.body.password, 10); // creates a hashed password
@@ -160,11 +119,11 @@ app.post("/login", (req, res) => {
     return res.status(400).send('One of the fields was left blank!');
   }
   // check if email doesn't match records
-  if (!emailFinder(req.body.email)) {
+  if (!emailFinder(req.body.email, users)) {
     return res.status(403).send('Email not found! Check email or make a new account.');
   }
   // check if inputted password matches stored password (using bcrypt)
-  const userID = emailFinder(req.body.email).id;
+  const userID = emailFinder(req.body.email, users).id;
   if (!bcrypt.compareSync(req.body.password, users[userID].password)) {
     return res.status(403).send('Incorrect password!');
   }
@@ -201,7 +160,7 @@ app.get("/urls/:id", (req, res) => {
     return res.status(204).send('There is no TinyURL with that ID!');
   }
   if (req.session['user_id'] !== urlDatabase[req.params.id].userID) {
-    return res.status(401).send('You do not have permission to view that TinyUrl page.')
+    return res.status(401).send('You do not have permission to view that TinyUrl page.');
   }
   const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id].longURL, user: users[req.session['user_id']] };
   return res.render("urls_show", templateVars);
@@ -216,10 +175,10 @@ app.post("/urls/:id/delete", (req, res) => {
     return res.status(204).send('There is no TinyURL with that ID so you can\'t delete it!\n');
   }
   if (req.session['user_id'] !== urlDatabase[req.params.id].userID) {
-    return res.status(401).send('You do not have permission to delete that TinyUrl entry.\n')
+    return res.status(401).send('You do not have permission to delete that TinyUrl entry.\n');
   }
   delete urlDatabase[req.params.id];
-  return res.redirect("/urls")
+  return res.redirect("/urls");
 });
 
 // edit list item
@@ -230,8 +189,8 @@ app.post("/urls/:id/edit", (req, res) => {
   console.log(req.body);
   urlDatabase[req.params.id].longURL = req.body.longURL;
   console.log(urlDatabase);
-  return res.redirect("/urls")
-}) 
+  return res.redirect("/urls");
+});
 
 // redirects you to the website associated with the shortened link
 app.get("/u/:id", (req, res) => {
@@ -246,13 +205,13 @@ app.get("/u/:id", (req, res) => {
 app.post("/logout", (req, res) => {
   console.log(`Clearing the cookie for user: ${req.session['user_id']}`);
   req.session = null;
-  return res.redirect("/urls")
+  return res.redirect("/urls");
 });
 
 // 404 page for if something goes wrong
 app.get("/ERROR", (req, res) => {
-  const templateVars = { user: users[req.session['user_id']] }
-  return res.render("error_page", templateVars)
+  const templateVars = { user: users[req.session['user_id']] };
+  return res.render("error_page", templateVars);
 });
 
 ////////////////////////////////////////////
