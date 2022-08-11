@@ -8,10 +8,21 @@ const PORT = 3000; // default port 3000
 app.set("view engine", "ejs"); // set the view engine to EJS
 app.use(express.urlencoded({ extended: true })); // encodes URL data from the POST method
 const bcrypt = require("bcryptjs"); // require bcrypt
+// TODO: implement bcrypt salt
+// const salt = bcrypt.genSaltSync(10);
+const cookieSession = require('cookie-session');
 
-// const hashedPassword = bcrypt.hashSync(password, 10); // creates a hashed password
-const cookieParser = require('cookie-parser');
-app.use(cookieParser()); // allows the app to use cookieParser
+app.use(cookieSession({
+  name: 'session',
+  keys: ['c8911ee4-2ab7-4bc3-9814-ecc6147ba261'],
+
+  // Cookie Options
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}))
+
+// DELETE BEFORE SUBMITTING switching to cookieSession
+// const cookieParser = require('cookie-parser');
+// app.use(cookieParser()); // allows the app to use cookieParser
 
 ////////////////////////////////////////////
 // GLOBAL SCOPE
@@ -95,16 +106,16 @@ app.get("/", (req, res) => {
 
 // EJS page that shows list of short and long URLs
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlsForUser(req.cookies["user_id"]), user: users[req.cookies["user_id"]] };
+  const templateVars = { urls: urlsForUser(req.session['user_id']), user: users[req.session['user_id']] };
   return res.render("urls_index", templateVars);
 });
 
 // EJS page that shows register field
 app.get("/register", (req, res) => {
-  const templateVars = { urls: urlDatabase, user: users[req.cookies["user_id"]] };
+  const templateVars = { urls: urlDatabase, user: users[req.session['user_id']] };
 
   // if a user is logged in, redirect to home
-  if (req.cookies["user_id"]) {
+  if (req.session['user_id']) {
     return res.redirect("/urls");
   }
   return res.render("registration", templateVars);
@@ -123,7 +134,8 @@ app.post("/register", (req, res) => {
   const hashedPassword = bcrypt.hashSync(req.body.password, 10); // creates a hashed password
   const randomID = generateRandomString(); //generating unique code
   users[randomID] = { id: randomID, email: req.body.email, password: hashedPassword };
-  res.cookie('user_id', randomID);
+
+  req.session['user_id'] = randomID;
   console.log(`New user created: ${JSON.stringify(users[randomID])}`);
   console.log(users);
   return res.redirect("/urls");
@@ -131,9 +143,9 @@ app.post("/register", (req, res) => {
 
 // GET route to show LOGIN page
 app.get("/login", (req, res) => {
-  const templateVars = { user: users[req.cookies["user_id"]] };
+  const templateVars = { user: users[req.session['user_id']] };
   // if a user is logged in, redirect to home
-  if (req.cookies["user_id"]) {
+  if (req.session['user_id']) {
     return res.redirect("/urls");
   }
   // otherwise, go to login page
@@ -156,14 +168,14 @@ app.post("/login", (req, res) => {
   if (!bcrypt.compareSync(req.body.password, users[userID].password)) {
     return res.status(403).send('Incorrect password!');
   }
-  res.cookie('user_id', userID);
+  req.session['user_id'] = userID;
   return res.redirect("/urls");
 });
 
 // GET route to present SUBMISSION FORM to user
 app.get("/urls/new", (req, res) => {
-  const templateVars = { user: users[req.cookies["user_id"]] };
-  if (!req.cookies["user_id"]) {
+  const templateVars = { user: users[req.session['user_id']] };
+  if (!req.session['user_id']) {
     return res.redirect("/login");
   }
   return res.render("urls_new", templateVars);
@@ -171,39 +183,39 @@ app.get("/urls/new", (req, res) => {
 
 // POST that submits a new entry to the database and redirects to the page for the ID
 app.post("/urls", (req, res) => {
-  if (!req.cookies["user_id"]) {
+  if (!req.session['user_id']) {
     return res.send('You must be logged in to create TinyURLs!');
   }
   const newID = generateRandomString();
-  urlDatabase[newID] = { longURL: req.body.longURL, userID: req.cookies["user_id"] };
+  urlDatabase[newID] = { longURL: req.body.longURL, userID: req.session['user_id'] };
   console.log(urlDatabase);
   return res.redirect(`/urls/${newID}`);
 });
 
 // EJS page that displays the original URL and a shortened URL
 app.get("/urls/:id", (req, res) => {
-  if (!req.cookies["user_id"]) {
+  if (!req.session['user_id']) {
     return res.status(401).send('You must be logged in to view TinyURLs!');
   }
   if (!urlDatabase[req.params.id]) {
     return res.status(204).send('There is no TinyURL with that ID!');
   }
-  if (req.cookies["user_id"] !== urlDatabase[req.params.id].userID) {
+  if (req.session['user_id'] !== urlDatabase[req.params.id].userID) {
     return res.status(401).send('You do not have permission to view that TinyUrl page.')
   }
-  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id].longURL, user: users[req.cookies["user_id"]] };
+  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id].longURL, user: users[req.session['user_id']] };
   return res.render("urls_show", templateVars);
 });
 
 // delete list item
 app.post("/urls/:id/delete", (req, res) => {
-  if (!req.cookies["user_id"]) {
+  if (!req.session['user_id']) {
     return res.status(401).send('You must be logged in to delete TinyURLs!\n');
   }
   if (!urlDatabase[req.params.id]) {
     return res.status(204).send('There is no TinyURL with that ID so you can\'t delete it!\n');
   }
-  if (req.cookies["user_id"] !== urlDatabase[req.params.id].userID) {
+  if (req.session['user_id'] !== urlDatabase[req.params.id].userID) {
     return res.status(401).send('You do not have permission to delete that TinyUrl entry.\n')
   }
   delete urlDatabase[req.params.id];
@@ -212,7 +224,7 @@ app.post("/urls/:id/delete", (req, res) => {
 
 // edit list item
 app.post("/urls/:id/edit", (req, res) => {
-  if (req.cookies["user_id"] !== urlDatabase[req.params.id].userID) {
+  if (req.session['user_id'] !== urlDatabase[req.params.id].userID) {
     return res.status(401).send('You do not have permission to edit that TinyUrl entry.\n');
   }
   console.log(req.body);
@@ -232,14 +244,14 @@ app.get("/u/:id", (req, res) => {
 
 // LOGOUT user
 app.post("/logout", (req, res) => {
-  console.log(`Clearing the cookie: ${req.cookies["user_id"]}`);
-  res.clearCookie('user_id')
+  console.log(`Clearing the cookie for user: ${req.session['user_id']}`);
+  req.session = null;
   return res.redirect("/urls")
 });
 
 // 404 page for if something goes wrong
 app.get("/ERROR", (req, res) => {
-  const templateVars = { user: users[req.cookies["user_id"]] }
+  const templateVars = { user: users[req.session['user_id']] }
   return res.render("error_page", templateVars)
 });
 
