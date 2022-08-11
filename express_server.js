@@ -4,7 +4,7 @@
 
 const express = require("express");
 const app = express();
-const PORT = 3000; // default port 3000
+const PORT = 8080;
 app.set("view engine", "ejs"); // set the view engine to EJS
 app.use(express.urlencoded({ extended: true })); // encodes URL data from the POST method
 const { emailFinder, generateRandomString, urlsForUser, isValidUrl } = require('./helpers.js');
@@ -30,7 +30,7 @@ const urlDatabase = {
     userID: "userRandomID",
   },
   'j5jt42': {
-    longURL: "https://www.neopets.ca",
+    longURL: "https://www.neopets.com",
     userID: "user2RandomID",
   },
 };
@@ -52,12 +52,7 @@ const users = {
 // ROUTES
 ////////////////////////////////////////////
 
-// GET shows what's in the URLs database object
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
-
-// redirects / to urls_index
+// GET that redirects / to urls_index
 app.get("/", (req, res) => {
   return res.redirect('/urls');
 });
@@ -68,10 +63,9 @@ app.get("/urls", (req, res) => {
   return res.render("urls_index", templateVars);
 });
 
-// EJS page that shows register field
+// EJS page that accepts register details
 app.get("/register", (req, res) => {
   const templateVars = { urls: urlDatabase, user: users[req.session['user_id']] };
-
   // if a user is logged in, redirect to home
   if (req.session['user_id']) {
     return res.redirect("/urls");
@@ -79,7 +73,7 @@ app.get("/register", (req, res) => {
   return res.render("registration", templateVars);
 });
 
-// Creates an entry for the user on registration and assigns a cookie to the user
+// POST that registers a user: assigns them a cookie and a hashed password
 app.post("/register", (req, res) => {
   // check if either email or password field are empty
   if (!req.body.email || !req.body.password) {
@@ -89,17 +83,15 @@ app.post("/register", (req, res) => {
   if (emailFinder(req.body.email, users)) {
     return res.status(400).send('Email already in use!');
   }
+  // creates a user entry in the database
   const hashedPassword = bcrypt.hashSync(req.body.password, 10); // creates a hashed password
   const randomID = generateRandomString(); //generating unique code
   users[randomID] = { id: randomID, email: req.body.email, password: hashedPassword };
-
   req.session['user_id'] = randomID;
-  console.log(`New user created: ${JSON.stringify(users[randomID])}`);
-  console.log(users);
   return res.redirect("/urls");
 });
 
-// GET route to show LOGIN page
+// EJS page that accepts login details
 app.get("/login", (req, res) => {
   const templateVars = { user: users[req.session['user_id']] };
   // if a user is logged in, redirect to home
@@ -110,9 +102,8 @@ app.get("/login", (req, res) => {
   return res.render("login", templateVars);
 });
 
-// POST to LOGIN
+// POST to log user in
 app.post("/login", (req, res) => {
-  console.log(users);
   // check if either email or password field are empty
   if (!req.body.email || !req.body.password) {
     return res.status(400).send('One of the fields was left blank!');
@@ -130,7 +121,7 @@ app.post("/login", (req, res) => {
   return res.redirect("/urls");
 });
 
-// GET route to present SUBMISSION FORM to user
+// EJS page that allows user to input new entry details
 app.get("/urls/new", (req, res) => {
   const templateVars = { user: users[req.session['user_id']] };
   if (!req.session['user_id']) {
@@ -139,18 +130,17 @@ app.get("/urls/new", (req, res) => {
   return res.render("urls_new", templateVars);
 });
 
-// POST that submits a new entry to the database and redirects to the page for the ID
+// POST that submits a new entry to the database and redirects to the new entry page
 app.post("/urls", (req, res) => {
   if (!req.session['user_id']) {
     return res.status(401).send('You must be logged in to create TinyApp URLs!\n');
   }
   const newID = generateRandomString();
   urlDatabase[newID] = { longURL: req.body.longURL, userID: req.session['user_id'] };
-  console.log(urlDatabase);
   return res.redirect(`/urls/${newID}`);
 });
 
-// EJS page that displays the original URL and a shortened URL
+// EJS page that displays the information related to an entry (and edit field)
 app.get("/urls/:id", (req, res) => {
   if (!req.session['user_id']) {
     return res.status(401).send('You must be logged in to view TinyApp URL pages!');
@@ -164,7 +154,7 @@ app.get("/urls/:id", (req, res) => {
   }
 });
 
-// delete list item
+// POST to delete an entry
 app.post("/urls/:id/delete", (req, res) => {
   if (!req.session['user_id']) {
     return res.status(401).send('You must be logged in to delete TinyApp URLs!\n');
@@ -179,14 +169,12 @@ app.post("/urls/:id/delete", (req, res) => {
   return res.redirect("/urls");
 });
 
-// edit list item
+// POST to edit an entry
 app.post("/urls/:id/edit", (req, res) => {
   if (req.session['user_id'] !== urlDatabase[req.params.id].userID) {
     return res.status(401).send('You do not have permission to edit that TinyAPP entry.\n');
   }
-  console.log(req.body);
   urlDatabase[req.params.id].longURL = req.body.longURL;
-  console.log(urlDatabase);
   return res.redirect("/urls");
 });
 
@@ -202,15 +190,8 @@ app.get("/u/:id", (req, res) => {
   return res.redirect(longURL);
 });
 
-// 404 page for if something goes wrong
-app.get("/ERROR", (req, res) => {
-  const templateVars = { user: users[req.session['user_id']] };
-  return res.render("error_page", templateVars);
-});
-
-// LOGOUT user
+// POST to log user out, wipes the cookie from the browser
 app.post("/logout", (req, res) => {
-  console.log(`Clearing the cookie for user: ${req.session['user_id']}`);
   req.session = null;
   return res.redirect("/urls");
 });
