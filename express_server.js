@@ -10,7 +10,6 @@ app.use(express.urlencoded({ extended: true })); // encodes URL data from the PO
 const { emailFinder, generateRandomString, urlsForUser, isValidUrl } = require('./helpers.js');
 const bcrypt = require("bcryptjs"); // require bcrypt
 const cookieSession = require('cookie-session');
-
 app.use(cookieSession({
   name: 'session',
   keys: ['c8911ee4-2ab7-4bc3-9814-ecc6147ba261'],
@@ -143,7 +142,7 @@ app.get("/urls/new", (req, res) => {
 // POST that submits a new entry to the database and redirects to the page for the ID
 app.post("/urls", (req, res) => {
   if (!req.session['user_id']) {
-    return res.send('You must be logged in to create TinyURLs!');
+    return res.status(401).send('You must be logged in to create TinyApp URLs!\n');
   }
   const newID = generateRandomString();
   urlDatabase[newID] = { longURL: req.body.longURL, userID: req.session['user_id'] };
@@ -154,28 +153,27 @@ app.post("/urls", (req, res) => {
 // EJS page that displays the original URL and a shortened URL
 app.get("/urls/:id", (req, res) => {
   if (!req.session['user_id']) {
-    return res.status(401).send('You must be logged in to view TinyURLs!');
+    return res.status(401).send('You must be logged in to view TinyApp URL pages!');
+  } else if (!urlDatabase[req.params.id]) {
+    return res.status(404).send('There is no TinyApp URL with that ID!');
+  } else if (req.session['user_id'] !== urlDatabase[req.params.id].userID) {
+    return res.status(401).send('You do not have permission to view that TinyApp URL page.');
+  } else {
+    const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id].longURL, user: users[req.session['user_id']] };
+    return res.render("urls_show", templateVars);
   }
-  if (!urlDatabase[req.params.id]) {
-    return res.status(204).send('There is no TinyURL with that ID!');
-  }
-  if (req.session['user_id'] !== urlDatabase[req.params.id].userID) {
-    return res.status(401).send('You do not have permission to view that TinyUrl page.');
-  }
-  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id].longURL, user: users[req.session['user_id']] };
-  return res.render("urls_show", templateVars);
 });
 
 // delete list item
 app.post("/urls/:id/delete", (req, res) => {
   if (!req.session['user_id']) {
-    return res.status(401).send('You must be logged in to delete TinyURLs!\n');
+    return res.status(401).send('You must be logged in to delete TinyApp URLs!\n');
   }
   if (!urlDatabase[req.params.id]) {
-    return res.status(204).send('There is no TinyURL with that ID so you can\'t delete it!\n');
+    return res.status(204).send('There is no TinyApp URL with that ID so you can\'t delete it!\n');
   }
   if (req.session['user_id'] !== urlDatabase[req.params.id].userID) {
-    return res.status(401).send('You do not have permission to delete that TinyUrl entry.\n');
+    return res.status(401).send('You do not have permission to delete that TinyApp entry.\n');
   }
   delete urlDatabase[req.params.id];
   return res.redirect("/urls");
@@ -184,7 +182,7 @@ app.post("/urls/:id/delete", (req, res) => {
 // edit list item
 app.post("/urls/:id/edit", (req, res) => {
   if (req.session['user_id'] !== urlDatabase[req.params.id].userID) {
-    return res.status(401).send('You do not have permission to edit that TinyUrl entry.\n');
+    return res.status(401).send('You do not have permission to edit that TinyAPP entry.\n');
   }
   console.log(req.body);
   urlDatabase[req.params.id].longURL = req.body.longURL;
@@ -194,11 +192,20 @@ app.post("/urls/:id/edit", (req, res) => {
 
 // redirects you to the website associated with the shortened link
 app.get("/u/:id", (req, res) => {
+  if (!urlDatabase[req.params.id]) {
+    return res.status(401).send('That TinyApp URL does not exist!\n');
+  }
   const longURL = urlDatabase[req.params.id].longURL;
   if (!isValidUrl(longURL)) {
-    return res.redirect("/ERROR");
+    return res.status(401).send('That website either does not exist or the link may need http:// or https:// added to it.\n');
   }
   return res.redirect(longURL);
+});
+
+// 404 page for if something goes wrong
+app.get("/ERROR", (req, res) => {
+  const templateVars = { user: users[req.session['user_id']] };
+  return res.render("error_page", templateVars);
 });
 
 // LOGOUT user
@@ -206,12 +213,6 @@ app.post("/logout", (req, res) => {
   console.log(`Clearing the cookie for user: ${req.session['user_id']}`);
   req.session = null;
   return res.redirect("/urls");
-});
-
-// 404 page for if something goes wrong
-app.get("/ERROR", (req, res) => {
-  const templateVars = { user: users[req.session['user_id']] };
-  return res.render("error_page", templateVars);
 });
 
 ////////////////////////////////////////////
