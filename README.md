@@ -4,8 +4,8 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 ## Final Product
 
-!["create an account to get started"]()
-!["add and store links"]()
+!["create an account to get started"](https://github.com/paige-clark/tinyapp/blob/master/docs/TinyApp2.png?raw=true)
+!["add and store links"](https://github.com/paige-clark/tinyapp/blob/master/docs/TinyApp1.png?raw=true)
 
 ## Dependencies
 
