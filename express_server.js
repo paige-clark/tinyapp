@@ -19,16 +19,31 @@ function generateRandomString() {
   return garbledString;
 };
 
+// const urlDatabase = {
+//   "b2xVn2": "http://www.lighthouselabs.ca",
+//   "9sm5xK": "http://www.google.com"
+// };
+
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "userRandomID",
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "userRandomID",
+  },
+  'j5jt42': {
+    longURL: "https://www.neopets.ca",
+    userID: "user2RandomID",
+  },
 };
 
 const users = {
   userRandomID: {
     id: "userRandomID",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur",
+    password: "eggs",
   },
   user2RandomID: {
     id: "user2RandomID",
@@ -46,6 +61,26 @@ const emailFinder = function(emailToCheck) {
   return null;
 };
 
+const urlsForUser = function (userID) {
+  let newObj = {};
+  for (const entry in urlDatabase) {
+    if (urlDatabase[entry].userID === userID) {
+      newObj[entry] = urlDatabase[entry];
+    }
+  }
+  return newObj;
+};
+
+// using this code from Free Code Camp to validate URL for redirect for now
+const isValidUrl = function(urlString) {
+  try { 
+    return Boolean(new URL(urlString)); 
+  }
+  catch(e){ 
+    return false; 
+  }
+}
+
 ////////////////////////////////////////////
 // ROUTES
 ////////////////////////////////////////////
@@ -62,8 +97,8 @@ app.get("/", (req, res) => {
 
 // EJS page that shows list of short and long URLs
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase, user: users[req.cookies["user_id"]] };
-  res.render("urls_index", templateVars);
+  const templateVars = { urls: urlsForUser(req.cookies["user_id"]), user: users[req.cookies["user_id"]] };
+  return res.render("urls_index", templateVars);
 });
 
 // EJS page that shows register field
@@ -140,43 +175,59 @@ app.post("/urls", (req, res) => {
     return res.send('You must be logged in to create TinyURLs!');
   }
   const newID = generateRandomString();
-  const newSubmission = urlDatabase[newID] = req.body.longURL;
-  return res.redirect(`/urls/${newID}`) //ask if this is correct tomorrow
+  urlDatabase[newID] = { longURL: req.body.longURL, userID: req.cookies["user_id"] };
+  console.log(urlDatabase);
+  return res.redirect(`/urls/${newID}`);
 });
 
 // EJS page that displays the original URL and a shortened URL
 app.get("/urls/:id", (req, res) => {
-  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id], user: users[req.cookies["user_id"]] };
-  if (!urlDatabase[req.params.id]) {
-    return res.send('There is no TinyURL with that ID!');
+  if (!req.cookies["user_id"]) {
+    return res.status(401).send('You must be logged in to view TinyURLs!');
   }
+  if (!urlDatabase[req.params.id]) {
+    return res.status(204).send('There is no TinyURL with that ID!');
+  }
+  if (req.cookies["user_id"] !== urlDatabase[req.params.id].userID) {
+    return res.status(401).send('You do not have permission to view that TinyUrl page.')
+  }
+  const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id].longURL, user: users[req.cookies["user_id"]] };
   return res.render("urls_show", templateVars);
 });
 
 // delete list item
-app.post("/urls/:id/delete", (request, response) => {
-  delete urlDatabase[request.params.id];
-  response.redirect("/urls")
+app.post("/urls/:id/delete", (req, res) => {
+  if (!req.cookies["user_id"]) {
+    return res.status(401).send('You must be logged in to delete TinyURLs!\n');
+  }
+  if (!urlDatabase[req.params.id]) {
+    return res.status(204).send('There is no TinyURL with that ID so you can\'t delete it!\n');
+  }
+  if (req.cookies["user_id"] !== urlDatabase[req.params.id].userID) {
+    return res.status(401).send('You do not have permission to delete that TinyUrl entry.\n')
+  }
+  delete urlDatabase[req.params.id];
+  return res.redirect("/urls")
 });
 
 // edit list item
 app.post("/urls/:id/edit", (req, res) => {
-  if (!req.cookies["user_id"]) {
-    return res.send('You must be logged in to edit TinyURLs!');
+  if (req.cookies["user_id"] !== urlDatabase[req.params.id].userID) {
+    return res.status(401).send('You do not have permission to edit that TinyUrl entry.\n');
   }
   console.log(req.body);
-  urlDatabase[req.params.id] = req.body.longURL;
+  urlDatabase[req.params.id].longURL = req.body.longURL;
+  console.log(urlDatabase);
   return res.redirect("/urls")
 }) 
 
 // redirects you to the website associated with the shortened link
 app.get("/u/:id", (req, res) => {
-  const longURL = urlDatabase[req.params.id];
-  if (longURL) {
-    return res.redirect(longURL);
-  } else {
-    return res.redirect("/ERROR")
+  const longURL = urlDatabase[req.params.id].longURL;
+  if (!isValidUrl(longURL)) {
+    return res.redirect("/ERROR");
   }
+  return res.redirect(longURL);
 });
 
 // LOGOUT user
@@ -189,7 +240,7 @@ app.post("/logout", (req, res) => {
 // 404 page for if something goes wrong
 app.get("/ERROR", (req, res) => {
   const templateVars = { user: users[req.cookies["user_id"]] }
-  res.render("error_page", templateVars)
+  return res.render("error_page", templateVars)
 });
 
 ////////////////////////////////////////////
